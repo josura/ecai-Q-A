@@ -45,7 +45,7 @@ for i in range(max_iterations):
         full_path = os.path.join(textFolder, doc)
         # Define the LLM we plan to use. Here we are going to use ChatGPT 3.5 turbo
         current_temperature = 0.2
-        current_max_tokens = 100
+        current_max_tokens = 1000
         llm=ChatOpenAI(model_name = model_id, temperature=current_temperature, max_tokens=current_max_tokens, api_key=OpenAI_key)
 
         # Get the list of questions (multiple answers of questions)
@@ -83,14 +83,23 @@ for i in range(max_iterations):
                 }
             )
             answers = answers.content
+            # collapse \n in the answers
+            answers = answers.replace("\n", " ")
             print("Answers: ", answers)
             print("\n\n")
             # save the answers in a csv file where the format is the following:
-            # <question>, <answer>, <document>, <temperature>, <max_tokens>, <iterations>
+            # <question-number>, <answer>, <document>, <temperature>, <max_tokens>, <iterations>
             file_name = doc.split(".")[0]
-            output = answersFolder + '/' + file_name + '.csv'
+            output = answersFolder + '/' + file_name + '.tsv'
+            question_number = question.split(".")[0]
+
+            # if the file does not exist, create it and write the header
+            if not os.path.exists(output):
+                with open(output, 'w') as f:
+                    f.write('question_number\tanswer\tdocument\ttemperature\tmax_tokens\titerations\n')
+
             with open(output, 'a') as f:
-                f.write(question + ', ' + answers + ', ' + doc + ', ' + str(current_temperature) + ', ' + str(current_max_tokens) + ', ' + str(i) + '\n')
+                f.write(question_number + '\t' + answers + '\t' + doc + '\t' + str(current_temperature) + '\t' + str(current_max_tokens) + '\t' + str(i) + '\n')
 
 
 for i in range(max_iterations):
@@ -136,11 +145,20 @@ for i in range(max_iterations):
                 }
             )
             answers = answers.content
+            # collapse \n in the answers
+            answers = answers.replace("\n", " ")
             print("Answers: ", answers)
             print("\n\n")
             # save the answers in a csv file where the format is the following:
             # <question>, <answer>, <document>, <temperature>, <max_tokens>, <iterations>
             file_name = pdf.split(".")[0]
-            output = answersFolder + '/' + file_name + '.csv'
+            output = answersFolder + '/' + file_name + '.tsv'
+            question_number = question.split(".")[0]
+
+            # if the file does not exist, create it and write the header
+            if not os.path.exists(output):
+                with open(output, 'w') as f:
+                    f.write('question_number\tanswer\tdocument\ttemperature\tmax_tokens\titerations\n')
+
             with open(output, 'a') as f:
-                f.write(question + ', ' + answers + ', ' + pdf + ', ' + str(current_temperature) + ', ' + str(current_max_tokens) + ', ' + str(i) + '\n')
+                f.write(question_number + '\t' + answers + '\t' + pdf + '\t' + str(current_temperature) + '\t' + str(current_max_tokens) + '\t' + str(i) + '\n')
