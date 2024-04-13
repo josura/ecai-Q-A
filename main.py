@@ -3,11 +3,16 @@
 # Imports
 import os
 from dotenv import load_dotenv,find_dotenv
-from langchain.llms import OpenAI
-from langchain.document_loaders import TextLoader
-from langchain.document_loaders import PyPDFLoader
-from langchain.indexes import VectorstoreIndexCreator
+from langchain_community.llms import OpenAI
+from langchain_community.document_loaders import TextLoader
+from langchain_community.document_loaders import PyPDFLoader
 from langchain_openai import ChatOpenAI
+
+# Use the chat messages to store the documents
+from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+ 
+
 import utilities
 
 
@@ -20,11 +25,6 @@ model_id = "gpt-3.5-turbo"
 OpenAI_key = os.environ.get("OPEN_AI_KEY")
 
 
-
-# Document loader
-document_loader = TextLoader()
-# pdf loader
-pdf_loader = PyPDFLoader()
 
 
 textFolder = 'data/text'
@@ -56,21 +56,39 @@ for i in range(max_iterations):
         questions = utilities.read_questions(os.path.join(questionsFolder, doc))
 
         # Load the document
-        document = document_loader.load_document(full_path)
-        # Define the index creator
-        index_creator = VectorstoreIndexCreator()
-        # Add the document to the index
-        index_creator.add_document(document)
+        document_loader = TextLoader(full_path)
+        document = document_loader.load()
+        # # Define the index creator
+        # index_creator = VectorstoreIndexCreator()
+        # # Add the document to the index
+        # index_creator.add_document(document)
+        # define the prompt template with the document
+        prompt = ChatPromptTemplate.from_messages([
+            document[0].page_content,
+            MessagesPlaceholder(variable_name="question")
+        ])
+
+        # define the chain with the prompt, the question and the LLM
+        chain = prompt | llm
 
         for question in questions:
             print("Question: ", question)
-            answers = llm.ask_question(question, index)
+            # answers = llm.ask_question(question, index)
+            answers = chain.invoke(
+                {
+                    "question": [
+                        HumanMessage(question),
+                        HumanMessage(content="What is the answer to the question?"),
+                    ]
+                }
+            )
+            answers = answers.content
             print("Answers: ", answers)
             print("\n\n")
             # save the answers in a csv file where the format is the following:
             # <question>, <answer>, <document>, <temperature>, <max_tokens>, <iterations>
             file_name = doc.split(".")[0]
-            output = questionsFolder + '/' + file_name + '.csv'
+            output = answersFolder + '/' + file_name + '.csv'
             with open(output, 'a') as f:
                 f.write(question + ', ' + answers + ', ' + doc + ', ' + str(current_temperature) + ', ' + str(current_max_tokens) + ', ' + str(i) + '\n')
 
@@ -91,20 +109,38 @@ for i in range(max_iterations):
         questions = utilities.read_questions(os.path.join(questionsFolder, pdf))
 
         # Load the document
-        document = pdf_loader.load_document(full_path)
-        # Define the index creator
-        index_creator = VectorstoreIndexCreator()
-        # Add the document to the index
-        index_creator.add_document(document)
+        document_loader = PyPDFLoader(full_path)
+        document = pdf_loader.load()
+        # # Define the index creator
+        # index_creator = VectorstoreIndexCreator()
+        # # Add the document to the index
+        # index_creator.add_document(document)
+        # define the prompt template with the document
+        prompt = ChatPromptTemplate.from_messages([
+            document[0].page_content,
+            MessagesPlaceholder(variable_name="question")
+        ])
+
+        # define the chain with the prompt, the question and the LLM
+        chain = prompt | llm
 
         for question in questions:
             print("Question: ", question)
-            answers = llm.ask_question(question, index)
+            # answers = llm.ask_question(question, index)
+            answers = chain.invoke(
+                {
+                    "question": [
+                        HumanMessage(question),
+                        HumanMessage(content="What is the answer to the question?"),
+                    ]
+                }
+            )
+            answers = answers.content
             print("Answers: ", answers)
             print("\n\n")
             # save the answers in a csv file where the format is the following:
             # <question>, <answer>, <document>, <temperature>, <max_tokens>, <iterations>
             file_name = pdf.split(".")[0]
-            output = questionsFolder + '/' + file_name + '.csv'
+            output = answersFolder + '/' + file_name + '.csv'
             with open(output, 'a') as f:
                 f.write(question + ', ' + answers + ', ' + pdf + ', ' + str(current_temperature) + ', ' + str(current_max_tokens) + ', ' + str(i) + '\n')
