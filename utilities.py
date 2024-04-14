@@ -21,10 +21,14 @@ def read_questions(file_path):
                 question = lines[current_line]
                 # control if the question is a multiple answers question or a free answer question
                 if current_line + 1 < len(lines) and not lines[current_line + 1][0].isdigit():
-                    # get the 4 answers, append them to the question string
+                    # get the answers (append every line to the question string , until the next question is found)
                     answers = []
-                    for i in range(4):
-                        answers.append(lines[current_line + 1 + i])
+                    # for i in range(4):
+                    #     answers.append(lines[current_line + 1 + i])
+                    current_line += 1
+                    while current_line < len(lines) and not lines[current_line][0].isdigit():
+                        answers.append(lines[current_line].strip())
+                        current_line += 1
                     question += " ".join(answers)
                     questions.append(question)
                     current_line += 5
